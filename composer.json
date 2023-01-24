@@ -1,0 +1,19 @@
+{
+  "name": "lenovo/online_shopping_template",
+  "autoload": {
+    "psr-4": {
+      "App\\OnlineShopping\\": "src/Libs/",
+      "Helpers\\": "src/Helpers/"
+    }
+  },
+  "authors": [
+    {
+      "name": "AungYeHtatCoder",
+      "email": "aungyehtatcoder2021@gmail.com"
+    }
+  ],
+  "require": {
+    "nesbot/carbon": "^2.65",
+    "fakerphp/faker": "^1.21"
+  }
+}

@@ -16,7 +16,7 @@ class UsersTable
  public function UserRegister($data)
  {
   try {
-   $query = "INSERT INTO users (user_name, email, password, phone, address, fix_address, role_id, status, created_at) VALUES (:user_name, :email, :password, :phone, :address, :fix_address, :role_id, :status,  NOW())";
+   $query = "INSERT INTO users (user_name, public_name, email, password, phone, address, fix_address, country, state, role_id, status, created_at) VALUES (:user_name, :public_name, :email, :password, :phone, :address, :fix_address, :country, :state, :role_id, :status,  NOW())";
    $statement = $this->db->prepare($query);
    $statement->execute($data);
    return $this->db->lastInsertId();

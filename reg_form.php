@@ -1,3 +1,8 @@
+<?php 
+include('vendor/autoload.php');
+use App\OnlineShopping\Database\Country;
+use App\OnlineShopping\Database\State;
+?>
 <?php
 include('includes/head.php');
 ?>
@@ -57,6 +62,14 @@ include('includes/head.php');
              <i class="la la-user"></i>
             </div>
            </fieldset>
+
+           <fieldset class="form-group position-relative has-icon-left">
+            <input type="text" class="form-control" id="user-name" name="public_name" placeholder="Public Name">
+            <div class="form-control-position">
+             <i class="la la-user"></i>
+            </div>
+           </fieldset>
+
            <fieldset class="form-group position-relative has-icon-left">
             <input type="email" class="form-control" name="email" id="user-email" placeholder="Your Email Address"
              required>
@@ -93,6 +106,36 @@ include('includes/head.php');
             <div class="form-control-position">
              <i class="la la-key"></i>
             </div>
+           </fieldset>
+
+           <fieldset class="form-group position-relative has-icon-left">
+
+            <select name="country" class="form-control" id="accountSelect">
+             <?php 
+                  $countries = Country::CountryOptions();
+                  foreach($countries as $key => $country):
+                  ?>
+             <!-- option and selected old data -->
+             <option value="<?= $country?>">
+              <?= $country ?>
+             </option>
+             <?php endforeach;?>
+            </select>
+           </fieldset>
+
+           <fieldset class="form-group position-relative has-icon-left">
+
+            <select name="state" class="form-control" id="accountSelect">
+             <?php 
+                  $states = State::StateOptions();
+                  foreach($states as $key => $state):
+                  ?>
+             <!-- option and selected old data -->
+             <option value="<?= $state?>">
+              <?= $state ?>
+             </option>
+             <?php endforeach;?>
+            </select>
            </fieldset>
            <div class="form-group row">
             <div class="col-sm-6 col-12 text-center text-sm-left pr-0">

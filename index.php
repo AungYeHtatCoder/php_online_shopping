@@ -1,3 +1,61 @@
+<?php 
+session_start();
+include('vendor/autoload.php');
+use App\OnlineShopping\Database\MySQL;
+use App\OnlineShopping\Database\ProductTable;
+use Helpers\HTTP;
+$db = new ProductTable(new MySQL);
+$products = $db->ProductIndex();
+$count_page = count($products);
+
+$start = $count_page; 
+$limit = 12;
+
+$per_page = ceil($start / $limit);
+
+if(isset($_GET['page'])) {
+ $page = $_GET['page'];
+ $start = ($page - 1) * $limit;
+} else {
+ $page = 1;
+}
+$offset = ($page - 1) * $limit;
+$product_data = $db->ProductPagination($offset, $limit);
+
+
+
+// session store 
+if(isset($_POST['add_to_cart'])){
+    $items = array(
+      'product_id' => $_POST['product_id'],
+      'product_name' => $_POST['product_name'],
+      'price' => $_POST['price'],
+      'qty' => $_POST['quantity'],
+      'file_name' => $_POST['file_name'],
+    );
+
+    if (isset($_SESSION['cart'])) {
+    // check existing product in cart
+    $item_ids = array_column($_SESSION['cart'], 'product_id');
+    if (in_array($_POST['product_id'], $item_ids)) {
+      echo "<script>alert('Product is already added in the cart')</script>";
+      echo "<script>window.location = 'index.php'</script>";
+    } else {
+      array_push($_SESSION['cart'], $items);
+    }
+  } else {
+    $_SESSION['cart'] = array($items);
+  }
+
+}
+
+// $card_data = $_SESSION['cart'] ?? [];
+// echo "<pre>";
+// print_r($card_data);
+// echo "</pre>";
+// die();
+$count_order = count($_SESSION['cart'] ?? []);
+?>
 <?php
 include('includes/head.php');
 ?>
@@ -21,7 +79,6 @@ include('includes/head.php');
  </div>
 
  <!-- END: Main Menu-->
- <!-- BEGIN: Content-->
  <div class="app-content content">
   <div class="content-overlay"></div>
   <div class="content-wrapper">
@@ -42,11 +99,14 @@ include('includes/head.php');
     <div class="content-header-right col-md-6 col-12">
      <div class="btn-group float-md-right">
       <button class="btn btn-info dropdown-toggle mb-1" type="button" data-toggle="dropdown" aria-haspopup="true"
-       aria-expanded="false">Action</button>
-      <div class="dropdown-menu arrow"><a class="dropdown-item" href="#"><i class="fa fa-calendar-check mr-1"></i>
-        Calender</a><a class="dropdown-item" href="#"><i class="fa fa-cart-plus mr-1"></i> Cart</a><a
-        class="dropdown-item" href="#"><i class="fa fa-life-ring mr-1"></i> Support</a>
-       <div class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="fa fa-cog mr-1"></i> Settings</a>
+       aria-expanded="false">Your Cart : <i class="ft-shopping-cart"></i> - <?= $count_order; ?></button>
+      <div class="dropdown-menu arrow">
+       <!-- <a class="dropdown-item" href="#"><i class="fa fa-calendar-check mr-1"></i>
+        Calender</a> -->
+       <a class="dropdown-item" href="order_index.php"><i class="fa fa-cart-plus mr-1"></i> Go To Cart</a>
+       <!-- <a class="dropdown-item" href="#"><i class="fa fa-life-ring mr-1"></i> Support</a>
+       <div class="dropdown-divider"></div>
+       <a class="dropdown-item" href="#"><i class="fa fa-cog mr-1"></i> Settings</a> -->
       </div>
      </div>
     </div>
@@ -56,9 +116,10 @@ include('includes/head.php');
      <div class="product-shop">
       <div class="card">
        <div class="card-body">
-        <span class="shop-title">Products</span>
+        <span class="shop-title">Products List </span>
         <span class="float-right">
-         <span class="result-text mr-1"> Showing 12 of 203 results</span>
+         <span class="result-text mr-1"> Showing <strong><?= count($product_data); ?></strong> of
+          <strong><?= count($products); ?></strong> results</span>
          <span class="display-buttons">
           <a href="#" class="active"><i class="ft-grid font-medium-2"></i></a>
           <a href="#"><i class="ft-list font-medium-2"></i></a>
@@ -67,6 +128,7 @@ include('includes/head.php');
        </div>
       </div>
       <div class="row match-height">
+       <?php foreach($product_data as $product) : ?>
        <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
         <div class="card pull-up">
          <div class="card-content">
@@ -74,13 +136,13 @@ include('includes/head.php');
            <a href="ecommerce-product-detail.html">
             <div class="product-img d-flex align-items-center">
              <div class="badge badge-success round">-50%</div>
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/07.png" alt="Card image cap">
+             <img class="img-fluid mb-1" src="<?= $product->file_name; ?>" alt="Card image cap">
             </div>
-            <h4 class="product-title">Card title</h4>
+            <h4 class="product-title"><?= $product->product_name; ?></h4>
             <div class="price-reviews">
              <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
+              <span class="price">$ <?= $product->price; ?></span>
+              <span class="old-price">$ <?= $product->old_price; ?></span>
              </span>
              <span class="ratings float-right"></span>
             </div>
@@ -88,360 +150,32 @@ include('includes/head.php');
            <div class="product-action d-flex justify-content-around">
             <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
               class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
+            <a href="product_detail.php?id=<?= $product->id; ?>" data-toggle="tooltip" data-placement="top"
+             title="Quick View"><i class="ft-eye"></i></a><span class="saperator">|</span>
             <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
               class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
+
+            <!-- product session store form start -->
+            <form action="#" method="post">
+             <input type="hidden" name="product_id" value="<?= $product->id; ?>">
+             <input type="hidden" name="product_name" value="<?= $product->product_name; ?>">
+             <input type="hidden" name="price" value="<?= $product->price; ?>">
+             <input type="hidden" name="file_name" value="<?= $product->file_name; ?>">
+             <input type="hidden" name="quantity" value="1">
+             <button type="submit" name="add_to_cart">
+              <i class="ft-shopping-cart"></i>
+             </button>
+            </form>
+            <!-- <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
+              class="ft-shopping-cart"></i></a> -->
            </div>
           </div>
          </div>
         </div>
        </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/fitbit-watch.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/air-jordan.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/13.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/apple-watch.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <div class="badge badge-success badge-right">Sale</div>
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/vr.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/carousel/23.jpg" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/carousel/24.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/carousel/26.jpg" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/carousel/25.jpg" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <img class="img-fluid mb-1" src="admin/app-assets/images/carousel/27.jpg" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$250</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
-       <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6">
-        <div class="card pull-up">
-         <div class="card-content">
-          <div class="card-body">
-           <a href="ecommerce-product-detail.html">
-            <div class="product-img d-flex align-items-center">
-             <div class="badge badge-success">-55%</div>
-             <img class="img-fluid mb-1" src="admin/app-assets/images/elements/samsung-gear.png" alt="Card image cap">
-            </div>
-            <h4 class="product-title">Card title</h4>
-            <div class="price-reviews">
-             <span class="price-box">
-              <span class="price">$225</span>
-              <span class="old-price">$500</span>
-             </span>
-             <span class="ratings float-right"></span>
-            </div>
-           </a>
-           <div class="product-action d-flex justify-content-around">
-            <a href="#like" data-toggle="tooltip" data-placement="top" title="Add To Wishlist"><i
-              class="ft-heart"></i></a><span class="saperator">|</span>
-            <a href="#view" data-toggle="tooltip" data-placement="top" title="Quick View"><i
-              class="ft-eye"></i></a><span class="saperator">|</span>
-            <a href="#compare" data-toggle="tooltip" data-placement="top" title="Compare"><i
-              class="ft-sliders"></i></a><span class="saperator">|</span>
-            <a href="#cart" data-toggle="tooltip" data-placement="top" title="Add To Cart"><i
-              class="ft-shopping-cart"></i></a>
-           </div>
-          </div>
-         </div>
-        </div>
-       </div>
+
+       <?php endforeach; ?>
+
        <div class="col-12">
         <div class="card">
          <div class="card-content">
@@ -452,11 +186,13 @@ include('includes/head.php');
              <span class="sr-only">Previous</span>
             </a>
            </li>
-           <li class="page-item"><a class="page-link" href="#">1</a></li>
-           <li class="page-item"><a class="page-link" href="#">2</a></li>
-           <li class="page-item active"><a class="page-link" href="#">3</a></li>
-           <li class="page-item"><a class="page-link" href="#">4</a></li>
-           <li class="page-item"><a class="page-link" href="#">5</a></li>
+           <?php 
+          for($i=1; $i<=$per_page; $i++) :
+          ?>
+           <li class="page-item"><a class="page-link" href="product_list.php?page=<?= $i ?>"><?= $i ?></a>
+           </li>
+           <?php endfor; ?>
+
            <li class="page-item">
             <a class="page-link" href="#" aria-label="Next">
              <span aria-hidden="true">&raquo;</span>
@@ -476,10 +212,13 @@ include('includes/head.php');
      <div class="sidebar-content d-none d-lg-block sidebar-shop">
       <div class="card">
        <div class="card-body">
-        <div class="search">
-         <input id="basic-search" type="text" placeholder="Search here..." class="basic-search">
-         <i class="ficon ft-search"></i>
-        </div>
+        <form action="product_search_result.php" method="post">
+         <div class="search">
+          <input id="basic-search" name="search" type="text" placeholder="Search here..." class="basic-search">
+          <!-- search submit button -->
+          <i type="submit" class="ficon ft-search"></i>
+         </div>
+        </form>
        </div>
       </div>
       <div class="card">
@@ -700,7 +439,7 @@ include('includes/head.php');
          <div class="featured-image bg-success bg-lighten-2">
           <a href="ecommerce-product-detail.html">
            <div class="badge badge-danger">Best Deal</div>
-           <img src="admin/app-assets/images/elements/samsung-gear.png" alt="">
+           <img src="app-assets/images/elements/samsung-gear.png" alt="">
           </a>
          </div>
         </div>
@@ -712,6 +451,8 @@ include('includes/head.php');
    </div>
   </div>
  </div>
+ <!-- BEGIN: Content-->
+
  <!-- END: Content-->
  <div></div>
  <div class="sidenav-overlay"></div>
